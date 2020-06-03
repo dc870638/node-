@@ -2,6 +2,33 @@ const querystring = require('querystring')
 const handleBlogRouter = require('./src/router/blog')
 const handleUserRouter = require('./src/router/user')
 
+//用于处理post data
+const getPostData = (req) => {
+    const promise = new Promise( (resolve,reject) => {
+        if(req.method !== 'Post'){
+            resolve ({})
+            return 
+        }
+        if(req.headers['content-type'] !== 'application/json'){
+            resolve({})
+            return 
+        }
+        let postdata = ''
+        req.on('data',chunk => {
+            postdata += chunk.toString()
+        })
+        req.on('end', () => {
+            if(!postdata){
+                resolve({})
+                return 
+            }
+            resolve(
+                JSON.parse(postdata)
+            )
+        })
+    })
+    return promise
+}
 
 const serverHandle = (req,res) => {
     //设置返回格式JSON
@@ -12,9 +39,13 @@ const serverHandle = (req,res) => {
     const url = req.url
     req.path = url.split('?')[0]
 
-
     //解析query
     req.query = querystring.parse(url.split('?')[1])
+    
+    //处理post data
+    getPostData(req).then(postdata => {
+        req.body = postdata
+    })
 
    //处理blog路由
    const blogData = handleBlogRouter(req,res)
